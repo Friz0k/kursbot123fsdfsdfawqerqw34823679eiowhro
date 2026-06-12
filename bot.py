@@ -15,6 +15,9 @@ BANK_ROLE = "Доступ к Банку"
 DIS_ROLE = "Dis"
 PREFIX = "!"
 
+# ID роли, которая упоминается при создании контракта
+CONTRACT_NOTIFY_ROLE_ID = 1514999847630012517
+
 conn = sqlite3.connect('gta_rp.db')
 c = conn.cursor()
 
@@ -65,7 +68,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS disciplinary_actions (
     date TEXT
 )''')
 
-# Миграции старых таблиц
+# Миграции
 try:
     c.execute("ALTER TABLE family_members ADD COLUMN discord_id INTEGER")
 except:
@@ -372,7 +375,8 @@ async def contract(ctx, title: str, *, args: str = ""):
     c.execute("INSERT INTO contracts (title, participants, due_date, bills, created_by, created_at) VALUES (?,?,?,?,?,?)",
               (title, participants_db, due_date, bills, str(ctx.author), datetime.datetime.now().isoformat()))
     conn.commit()
-    await ctx.send(f'📝 Контракт "{title}" создан.\nУчастники: {participants_db}\nСрок: {due_date}\nВекселей: {bills}')
+    role_mention = f'<@&{CONTRACT_NOTIFY_ROLE_ID}>'
+    await ctx.send(f'{role_mention}\n📝 Контракт "{title}" создан.\nУчастники: {participants_db}\nСрок: {due_date}\nВекселей: {bills}')
 
 @bot.command(name="дв")
 @commands.check(has_dis_access)
@@ -429,7 +433,7 @@ async def help_cmd(ctx):
     embed.add_field(name="🚗 Авто", value="`!добававто Модель Госномер`\n`!удалавто Госномер`\n`!авто`\n`!взятьавто Номер [часы]`\n`!вернутьавто Номер`", inline=False)
     embed.add_field(name="📦 Склад", value="`!склад`\n`!взятьсклад Предмет Кол-во`\n`!положитьсклад Предмет Кол-во`", inline=False)
     embed.add_field(name="💰 Банк", value="`!банк` — баланс семьи\n`!пополнить Сумма [Причина]` — любой член семьи\n`!снять Сумма [Причина]` — требуется роль «Доступ к Банку»", inline=False)
-    embed.add_field(name="📝 Контракты", value="`!контракт \"Название\" Участник1 Участник2 ... ДД.ММ.ГГГГ ЧЧ:ММ [векселя]`", inline=False)
+    embed.add_field(name="📝 Контракты", value="`!контракт \"Название\" Участник1 Участник2 ... ДД.ММ.ГГГГ ЧЧ:ММ [векселя]`\n(отмечается <@&роль>)", inline=False)
     embed.add_field(name="⚠️ Дисциплина", value="`!дв Ник Тип Причина`\n`!выговоры [ник]`\n`!снятьдв Ник Причина`", inline=False)
     await ctx.send(embed=embed)
 
