@@ -61,6 +61,18 @@ c.execute('''CREATE TABLE IF NOT EXISTS disciplinary_actions (
     issued_by TEXT,
     date TEXT
 )''')
+
+# --- миграция для старых баз ---
+try:
+    c.execute("ALTER TABLE family_members ADD COLUMN discord_id INTEGER")
+except:
+    pass
+try:
+    c.execute("ALTER TABLE disciplinary_actions ADD COLUMN discord_id INTEGER")
+except:
+    pass
+# -------------------------------
+
 conn.commit()
 
 intents = discord.Intents.default()
