@@ -40,11 +40,9 @@ c.execute('''CREATE TABLE IF NOT EXISTS warehouse (
     amount INTEGER CHECK(amount >= 0)
 )''')
 
-# Новая структура семейного банка – одна строка с балансом
 c.execute('''CREATE TABLE IF NOT EXISTS bank (
     balance INTEGER DEFAULT 0
 )''')
-# Убедимся, что строка существует
 c.execute("INSERT INTO bank (balance) SELECT 0 WHERE NOT EXISTS (SELECT 1 FROM bank)")
 
 c.execute('''CREATE TABLE IF NOT EXISTS contracts (
@@ -67,7 +65,6 @@ c.execute('''CREATE TABLE IF NOT EXISTS disciplinary_actions (
     date TEXT
 )''')
 
-# Миграции старых баз (если столбцов ещё нет)
 try:
     c.execute("ALTER TABLE family_members ADD COLUMN discord_id INTEGER")
 except:
@@ -295,10 +292,14 @@ async def bank_balance(ctx):
     await ctx.send(f'💰 Баланс семьи: {balance}')
 
 @bot.command(name="пополнить")
-@commands.check(has_bank_access)
+@commands.check(is_in_family)
 async def bank_add(ctx, amount: int, *, reason: str = ""):
     if amount <= 0:
         return await ctx.send('❌ Сумма должна быть положительной.')
+    nick = get_member_nick(ctx.author.id)
+    if not nick:
+        return await ctx.send('❌ Вы не привязаны к семье. Используйте !добавсемья.')
+    nick = nick.replace("_", " ")
     c.execute("UPDATE bank SET balance = balance + ?", (amount,))
     conn.commit()
     new_balance = get_family_balance()
@@ -308,7 +309,7 @@ async def bank_add(ctx, amount: int, *, reason: str = ""):
             img_bytes = await att.read()
             new_name = att.filename.replace("_", "-")
             files.append(discord.File(fp=io.BytesIO(img_bytes), filename=new_name))
-    msg = f'💰 Счёт семьи пополнен на {amount}.'
+    msg = f'💰 Счёт семьи пополнен на {amount} (от {nick}).'
     if reason:
         msg += f' Причина: {reason}.'
     msg += f' Баланс: {new_balance}.'
@@ -319,6 +320,10 @@ async def bank_add(ctx, amount: int, *, reason: str = ""):
 async def bank_remove(ctx, amount: int, *, reason: str = ""):
     if amount <= 0:
         return await ctx.send('❌ Сумма должна быть положительной.')
+    nick = get_member_nick(ctx.author.id)
+    if not nick:
+        return await ctx.send('❌ Вы не привязаны к семье.')
+    nick = nick.replace("_", " ")
     balance = get_family_balance()
     if balance < amount:
         return await ctx.send(f'❌ Недостаточно средств. Баланс: {balance}.')
@@ -331,7 +336,7 @@ async def bank_remove(ctx, amount: int, *, reason: str = ""):
             img_bytes = await att.read()
             new_name = att.filename.replace("_", "-")
             files.append(discord.File(fp=io.BytesIO(img_bytes), filename=new_name))
-    msg = f'💸 Из бюджета семьи снято {amount}.'
+    msg = f'💸 Из бюджета семьи снято {amount} (от {nick}).'
     if reason:
         msg += f' Причина: {reason}.'
     msg += f' Баланс: {new_balance}.'
@@ -418,7 +423,7 @@ async def help_cmd(ctx):
     embed.add_field(name="👥 Семья", value="`!добавсемья ID Ник`\n`!удалсемья ID`\n`!семья`\n`!id @user`", inline=False)
     embed.add_field(name="🚗 Авто", value="`!добававто Модель Госномер`\n`!удалавто Госномер`\n`!авто`\n`!взятьавто Номер [часы]`\n`!вернутьавто Номер`", inline=False)
     embed.add_field(name="📦 Склад", value="`!склад`\n`!взятьсклад Предмет Кол-во`\n`!положитьсклад Предмет Кол-во`", inline=False)
-    embed.add_field(name="💰 Банк", value="`!банк` — баланс семьи\n`!пополнить Сумма [Причина]`\n`!снять Сумма [Причина]`", inline=False)
+    embed.add_field(name="💰 Банк", value="`!банк` — баланс семьи\n`!пополнить Сумма [Причина]` — любой член семьи\n`!снять Сумма [Причина]` — требуется роль «Доступ к Банку»", inline=False)
     embed.add_field(name="📝 Контракты", value="`!контракт \"Название\" Участник1 Участник2 ... ДД.ММ.ГГГГ ЧЧ:ММ [векселя]`", inline=False)
     embed.add_field(name="⚠️ Дисциплина", value="`!дв Ник Тип Причина`\n`!выговоры [ник]`\n`!снятьдв Ник Причина`", inline=False)
     await ctx.send(embed=embed)
