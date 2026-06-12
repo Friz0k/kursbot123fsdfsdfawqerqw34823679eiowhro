@@ -98,6 +98,17 @@ def check_auto_return():
     c.execute("UPDATE vehicles SET status='свободен', taken_by=NULL, taken_at=NULL, return_at=NULL WHERE status='занят' AND return_at <= ?", (now,))
     conn.commit()
 
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CheckFailure):
+        await ctx.send("❌ У вас недостаточно прав для этой команды. Требуется роль HR или Deadly.")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"❌ Пропущен обязательный аргумент. Используйте `!помощь` для подсказки.")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send(f"❌ Ошибка в аргументе: {error}")
+    else:
+        await ctx.send(f"❌ Произошла ошибка: {str(error)}")
+
 @bot.command(name="id")
 async def get_id(ctx, member: discord.Member = None):
     if not member:
@@ -146,7 +157,7 @@ async def family_list(ctx):
 @bot.command(name="добававто", aliases=["добавить-авто", "добавить_авто"])
 @commands.check(is_admin)
 async def add_car(ctx, nickname: str = None, model: str = None, plate: str = None):
-    if None in (model, plate):
+    if model is None or plate is None:
         return await ctx.send('ℹ️ Использование: `!добававто [ник] модель госномер`. Без ника – ваш ник.')
     if nickname is None or nickname.lower() == "себе":
         nickname = get_family_nickname(ctx.author.id)
@@ -434,7 +445,7 @@ async def list_actions(ctx, nickname: str = None):
 
 @bot.command(name="помощь", aliases=["хелп"])
 async def help_command(ctx):
-    embed = discord.Embed(title="📋 Помощь", color=0x00ff00)
+    embed = discord.Embed(title="Помощь", color=0x00ff00)
     embed.add_field(name="👥 Семья", value="`!добавсемья ID Ник` — добавить\n`!удалсемья ID` — удалить\n`!семья` — список\n`!id @user` — узнать ID", inline=False)
     embed.add_field(name="🚗 Авто", value="`!добававто [ник] Модель Госномер`\n`!удалавто Госномер`\n`!авто`\n`!взятьавто Номер [ник] [часы]`\n`!вернутьавто Номер`", inline=False)
     embed.add_field(name="📦 Склад", value="`!склад`\n`!взятьсклад [ник] Предмет Кол-во`\n`!положитьсклад [ник] Предмет Кол-во`", inline=False)
