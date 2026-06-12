@@ -82,7 +82,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=PREFIX, intents=intents, help_command=None)
 
-# ---------- Проверки ролей ----------
 def has_admin(ctx):
     return any(r.name == ADMIN_ROLE for r in ctx.author.roles)
 
@@ -115,7 +114,6 @@ def auto_return():
     c.execute("UPDATE vehicles SET status='свободен', taken_by=NULL, taken_at=NULL, return_at=NULL WHERE status='занят' AND return_at <= ?", (now,))
     conn.commit()
 
-# ---------- Обработчик ошибок ----------
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CheckFailure):
@@ -127,7 +125,6 @@ async def on_command_error(ctx, error):
     else:
         await ctx.send(f"❌ Ошибка: {str(error)}")
 
-# ---------- Команды ----------
 @bot.command(name="id")
 async def get_id(ctx, member: discord.Member = None):
     m = member or ctx.author
@@ -171,7 +168,6 @@ async def family_list(ctx):
     embed = discord.Embed(title='👥 Семья', description='\n'.join(lines), color=0x00ff00)
     await ctx.send(embed=embed)
 
-# ---------- Авто (без ника) ----------
 @bot.command(name="добававто")
 @commands.check(has_admin)
 async def add_car(ctx, model: str, plate: str):
@@ -249,7 +245,6 @@ async def return_car(ctx, car_id: int):
     conn.commit()
     await ctx.send(f'✅ Авто `{plate}` возвращено.')
 
-# ---------- Склад (без ника) ----------
 @bot.command(name="склад")
 @commands.check(is_in_family)
 async def warehouse_info(ctx):
@@ -292,7 +287,6 @@ async def put_warehouse(ctx, item: str, amount: int):
     conn.commit()
     await ctx.send(f'✅ `{nick}` положил {amount} x {item} на склад.')
 
-# ---------- Семейный банк ----------
 @bot.command(name="банк")
 @commands.check(is_in_family)
 async def bank_balance(ctx):
@@ -342,7 +336,6 @@ async def bank_remove(ctx, amount: int, *, reason: str = ""):
     msg += f' Баланс: {new_balance}.'
     await ctx.send(msg, files=files if files else None)
 
-# ---------- Контракты (участники через пробел) ----------
 @bot.command(name="контракт")
 @commands.check(has_admin)
 async def contract(ctx, title: str, *, args: str = ""):
@@ -351,8 +344,6 @@ async def contract(ctx, title: str, *, args: str = ""):
     parts = args.split()
     if len(parts) < 2:
         return await ctx.send('❌ Укажите дату (ДД.ММ.ГГГГ) и время (ЧЧ:ММ).')
-    # Ищем дату: предпоследний элемент должен быть формата ДД.ММ.ГГГГ, последний – ЧЧ:ММ (или векселя, если время не указано?)
-    # Будем искать с конца: сначала векселя (число), затем время, затем дата. Участники – всё остальное.
     bills = 0
     if parts[-1].isdigit():
         bills = int(parts[-1])
@@ -365,7 +356,6 @@ async def contract(ctx, title: str, *, args: str = ""):
         return await ctx.send('❌ Неверный формат даты/времени. Ожидается ДД.ММ.ГГГГ ЧЧ:ММ.')
     participants = ' '.join(parts[:-2])
     due_date = f"{date_str} {time_str}"
-    # Сохраняем участников через запятую
     parts_list = participants.split()
     participants_db = ', '.join(parts_list)
     c.execute("INSERT INTO contracts (title, participants, due_date, bills, created_by, created_at) VALUES (?,?,?,?,?,?)",
@@ -373,7 +363,6 @@ async def contract(ctx, title: str, *, args: str = ""):
     conn.commit()
     await ctx.send(f'📝 Контракт "{title}" создан.\nУчастники: {participants_db}\nСрок: {due_date}\nВекселей: {bills}')
 
-# ---------- Дисциплина (роль Dis) ----------
 @bot.command(name="дв")
 @commands.check(has_dis_access)
 async def dv_add(ctx, nickname: str, action_type: str, *, reason: str):
@@ -412,7 +401,6 @@ async def dv_list(ctx, nickname: str = None):
 @commands.check(has_dis_access)
 async def dv_remove(ctx, nickname: str, *, reason: str):
     nickname = nickname.replace("_", " ")
-    # Удаляем последний выговор
     c.execute("DELETE FROM disciplinary_actions WHERE id = (SELECT id FROM disciplinary_actions WHERE nickname=? ORDER BY date DESC LIMIT 1)", (nickname,))
     if c.rowcount == 0:
         return await ctx.send(f'❌ У `{nickname}` нет выговоров.')
@@ -423,7 +411,6 @@ async def dv_remove(ctx, nickname: str, *, reason: str):
     mention = f'<@{disc_id}>' if disc_id else nickname
     await ctx.send(f'✅ Снят последний выговор с {mention}.\nПричина: {reason}')
 
-# ---------- Помощь ----------
 @bot.command(name="помощь", aliases=["хелп"])
 async def help_cmd(ctx):
     embed = discord.Embed(title="Помощь", color=0x00ff00)
@@ -435,7 +422,6 @@ async def help_cmd(ctx):
     embed.add_field(name="⚠️ Дисциплина", value="`!дв Ник Тип Причина`\n`!выговоры [ник]`\n`!снятьдв Ник Причина`", inline=False)
     await ctx.send(embed=embed)
 
-# ---------- Автоудаление команд ----------
 @bot.event
 async def on_command_completion(ctx):
     try:
@@ -443,7 +429,6 @@ async def on_command_completion(ctx):
     except:
         pass
 
-# ---------- Веб-сервер для Render ----------
 app = Flask(__name__)
 
 @app.route('/')
