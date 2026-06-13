@@ -9,7 +9,7 @@ from flask import Flask
 from threading import Thread
 
 TOKEN = os.getenv("TOKEN")
-ADMIN_ROLE = "Тех. Состав"
+ADMIN_ROLE = "Deadly"
 HR_ROLE = "Recruiter"
 DIS_ROLE = "Dicipline"
 FAMILY_ACCESS_ROLE = "Deadly"
